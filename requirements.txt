@@ -1,0 +1,4 @@
+requests
+selectorlib
+python-telegram-bot
+telegram.py

@@ -7,11 +7,8 @@ import os
 from sys import  platform
 import functools
 
-try:
-     from auth_token import token
-except Exception as error:
-    token = os.environ['TOKEN']
 
+token = os.environ.get('TOKEN')
 time=20
 
 h = {

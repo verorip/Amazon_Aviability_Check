@@ -64,10 +64,14 @@ def start_watching(update: telegram.Update, context: telegram.ext.CallbackContex
                           text='Already watching for you')
 def stop_watching(update: telegram.Update, context: telegram.ext.CallbackContext):
     print('stopping')
-    active_chat_id.remove(update.message.chat_id)
-    context.bot.send_message(chat_id=update.message.chat_id,
-                      text='Stopped!')
-    context.job_queue.stop()
+    if update.message.chat_id in active_chat_id:
+        active_chat_id.remove(update.message.chat_id)
+        context.bot.send_message(chat_id=update.message.chat_id,
+                          text='Stopped!')
+        context.job_queue.stop()
+    else:
+        context.bot.send_message(chat_id=update.message.chat_id,
+                          text='Nothing to stop you need to /start first!')
 
 def help(update: telegram.Update, context: telegram.ext.CallbackContext):
     print('help')

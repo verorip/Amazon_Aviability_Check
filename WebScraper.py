@@ -1,6 +1,5 @@
 import requests
 import re
-from auth_token import token
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import os

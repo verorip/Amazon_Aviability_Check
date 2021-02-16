@@ -7,9 +7,9 @@ import os
 from sys import  platform
 import functools
 
-if 'win' in platform:
+try:
      from auth_token import token
-else:
+except Exception as error:
     token = os.environ['TOKEN']
 
 time=20

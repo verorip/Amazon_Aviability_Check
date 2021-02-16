@@ -3,8 +3,16 @@ import re
 from auth_token import token
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import os
+from sys import  platform
+import functools
 
-time=3600
+if 'win' in platform:
+     from auth_token import token
+else:
+    token = os.environ['TOKEN']
+
+time=20
 
 h = {
         'authority': 'www.amazon.it',
@@ -27,12 +35,14 @@ def add_to_dict(line):
     urls[line[0]]='http'+line[1]
 
 urls=dict()
+
 with open('urls.txt') as fp:
      content = fp.readlines()
      for line in content:
          add_to_dict(line)
 
 
+active_chat_id=[]
 
 
 def callback_patrol(context: telegram.ext.CallbackContext):
@@ -46,16 +56,21 @@ def callback_patrol(context: telegram.ext.CallbackContext):
 def extract_number(text):
      return text.split()[1].strip()
 
-def patrol(update: telegram.Update, context: telegram.ext.CallbackContext):
+def start_watching(update: telegram.Update, context: telegram.ext.CallbackContext):
     print("starting!")
-    context.bot.send_message(chat_id=update.message.chat_id,
-                      text='Start patrolling sir! Update every: ' + str(int(time/60)) + ' mins')
-    context.job_queue.run_repeating(callback_patrol, time, context=update.message.chat_id)
-
-def rest(update: telegram.Update, context: telegram.ext.CallbackContext):
+    if not update.message.chat_id in active_chat_id:
+        active_chat_id.append(update.message.chat_id)
+        context.bot.send_message(chat_id=update.message.chat_id,
+                          text='Start watching. Update every: ' + str(int(time/60)) + ' mins')
+        context.job_queue.run_repeating(callback_patrol, time, context=update.message.chat_id)
+    else:
+        context.bot.send_message(chat_id=update.message.chat_id,
+                          text='Already watching for you')
+def stop_watching(update: telegram.Update, context: telegram.ext.CallbackContext):
     print('stopping')
+    active_chat_id.remove(update.message.chat_id)
     context.bot.send_message(chat_id=update.message.chat_id,
-                      text='Stoped!')
+                      text='Stopped!')
     context.job_queue.stop()
 
 def help(update: telegram.Update, context: telegram.ext.CallbackContext):
@@ -79,15 +94,27 @@ def set_time(update: telegram.Update, context: telegram.ext.CallbackContext):
                       text='tempo settato a ' + str(val))
 
 
+def insert_watch(update: telegram.Update, context: telegram.ext.CallbackContext):
+    print('insert ', update.message.text.split())
+    if 'http' in update.message.text.split()[-1] and len(update.message.text.split())>=2:
+        key = functools.reduce(lambda a,b: a+b, update.message.text.split()[1:-1])
+        value = update.message.text.split()[-1]
+        urls[key]=value
+        context.bot.send_message(chat_id=update.message.chat_id,
+                          text='aggiunto {0} con link {1} alla ricerca\n'.format(key, value), disable_web_page_preview=True)
+    else:
+        context.bot.send_message(chat_id=update.message.chat_id,
+                          text='No link inside message or wrong format. Insert name and link separated from whitespaces')
 
 
 
 
 if __name__=='__main__':
     updater = Updater(token)
-    updater.dispatcher.add_handler(CommandHandler('start', patrol, pass_job_queue=True))
-    updater.dispatcher.add_handler(CommandHandler('stop', rest, pass_job_queue=True))
+    updater.dispatcher.add_handler(CommandHandler('start', start_watching, pass_job_queue=True))
+    updater.dispatcher.add_handler(CommandHandler('stop', stop_watching, pass_job_queue=True))
     updater.dispatcher.add_handler(CommandHandler('time', set_time))
     updater.dispatcher.add_handler(CommandHandler('help', help))
+    updater.dispatcher.add_handler(CommandHandler('update', insert_watch))
     updater.start_polling()
     print('bot running')
